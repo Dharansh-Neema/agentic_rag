@@ -84,7 +84,7 @@ export default function ChatInterface({
           <button
             onClick={() => onIngestDocuments(false)}
             disabled={isIngesting}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md disabled:bg-blue-300 text-sm flex items-center"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md disabled:bg-indigo-300 text-sm flex items-center shadow-sm transition-all duration-200"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
@@ -95,7 +95,7 @@ export default function ChatInterface({
           <button
             onClick={() => onIngestDocuments(true)}
             disabled={isIngesting}
-            className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md disabled:bg-gray-300 text-sm flex items-center"
+            className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md disabled:bg-gray-300 text-sm flex items-center shadow-sm transition-all duration-200"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
@@ -110,7 +110,7 @@ export default function ChatInterface({
       </div>
 
       {/* Chat messages */}
-      <div className="flex-grow overflow-y-auto p-4 bg-gray-50">
+      <div className="flex-grow overflow-y-auto p-4 bg-gray-100">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center text-gray-500">
             <div className="mb-2">
@@ -133,8 +133,8 @@ export default function ChatInterface({
                 <div
                   className={`max-w-3xl p-4 rounded-lg ${
                     message.role === 'user'
-                      ? 'bg-blue-500 text-white rounded-br-none'
-                      : 'bg-white border border-gray-200 rounded-bl-none'
+                      ? 'bg-indigo-600 text-white rounded-br-none shadow-sm'
+                      : 'bg-white border border-gray-200 text-gray-800 rounded-bl-none shadow-sm'
                   }`}
                 >
                   {message.role === 'assistant' ? (
@@ -149,7 +149,7 @@ export default function ChatInterface({
             ))}
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-white border border-gray-200 p-4 rounded-lg rounded-bl-none max-w-3xl">
+                <div className="bg-white border border-gray-200 p-4 rounded-lg rounded-bl-none max-w-3xl shadow-sm">
                   <div className="flex space-x-2 items-center text-gray-500">
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
@@ -167,7 +167,7 @@ export default function ChatInterface({
       {/* Input area */}
       <div className="bg-white border-t border-gray-200 p-4">
         <form onSubmit={handleSubmit} className="flex space-x-2">
-          <div className="flex-grow relative shadow-sm rounded-lg border border-gray-300 hover:border-gray-400 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all duration-200">
+          <div className="flex-grow relative shadow-sm rounded-lg border border-gray-300 hover:border-gray-400 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 transition-all duration-200">
             <textarea
               ref={inputRef}
               value={input}
@@ -193,7 +193,7 @@ export default function ChatInterface({
           <button
             type="submit"
             disabled={isLoading || isIngesting || !input.trim()}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg disabled:bg-blue-300 h-[44px] flex items-center justify-center shadow-sm transition-all duration-200 hover:shadow"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg disabled:bg-indigo-300 h-[44px] flex items-center justify-center shadow-sm transition-all duration-200 hover:shadow"
           >
             {isLoading ? (
               <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>

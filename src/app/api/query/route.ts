@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { queryRagChain } from '@/lib/retrieval/retriever';
 import { connectToDatabase } from '@/lib/utils/mongodb';
 import { ChatSession } from '@/lib/models/chatSession';
+import { processSuperAgentQuery } from '@/lib/agent/superAgent';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,8 +17,8 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
     
-    // Get answer from RAG system
-    const answer = await queryRagChain(question);
+    // Process query using the super agent
+    const answer = await processSuperAgentQuery(question, sessionId);
     
     // If sessionId is provided, save the conversation to the chat session
     if (sessionId) {

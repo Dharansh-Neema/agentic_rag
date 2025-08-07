@@ -13,3 +13,6 @@ export const GEMINI_API_KEY = getEnv('GEMINI_API_KEY');
 // Environment variables for Pinecone
 export const PINECONE_API_KEY = getEnv('PINECONE_API_KEY');
 export const PINECONE_ENVIRONMENT = getEnv('PINECONE_ENVIRONMENT');
+
+// Environment variables for OpenWeatherMap
+export const OPENWEATHER_API_KEY = getEnv('OPENWEATHER_API_KEY');
