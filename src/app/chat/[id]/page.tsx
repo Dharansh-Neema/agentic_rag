@@ -4,37 +4,58 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import ChatSidebar from '@/components/ChatSidebar';
 import ChatInterface, { Message } from '@/components/ChatInterface';
+import MobileMenu from '@/components/MobileMenu';
 
-export default function Home() {
+export default function ChatSession({ params }: { params: { id: string } }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isIngesting, setIsIngesting] = useState(false);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(params.id);
+  const [isLoadingSession, setIsLoadingSession] = useState(true);
   const router = useRouter();
-  
-  // Auto-create a new chat session on load
+
+  // Load chat session data
   useEffect(() => {
-    const createInitialSession = async () => {
+    const fetchSession = async () => {
       try {
-        const response = await fetch('/api/chat-sessions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: 'New Chat' }),
-        });
-
+        setIsLoadingSession(true);
+        const response = await fetch(`/api/chat-sessions/${params.id}`);
+        
+        if (!response.ok) {
+          if (response.status === 404) {
+            router.push('/');
+            return;
+          }
+          throw new Error('Failed to fetch session');
+        }
+        
         const data = await response.json();
-
+        
         if (data.success) {
-          // Navigate to the new chat session
-          router.push(`/chat/${data.data._id}`);
+          setSessionId(data.data._id);
+          
+          // Convert messages from the session
+          const sessionMessages = data.data.messages.map((msg: any) => ({
+            role: msg.role,
+            content: msg.content
+          }));
+          
+          setMessages(sessionMessages);
+        } else {
+          router.push('/');
         }
       } catch (error) {
-        console.error('Error creating initial chat session:', error);
+        console.error('Error fetching chat session:', error);
+        router.push('/');
+      } finally {
+        setIsLoadingSession(false);
       }
     };
-    
-    createInitialSession();
-  }, [router]);
+
+    if (params.id) {
+      fetchSession();
+    }
+  }, [params.id, router]);
 
   // Create a new chat session
   const handleNewChat = async () => {
@@ -58,7 +79,7 @@ export default function Home() {
 
   // Handle sending a message
   const handleSendMessage = async (content: string) => {
-    if (!content.trim()) return;
+    if (!content.trim() || !sessionId) return;
     
     // Add user message to chat
     setMessages(prev => [...prev, { role: 'user', content }]);
@@ -70,7 +91,7 @@ export default function Home() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           question: content,
-          sessionId // Include sessionId if available
+          sessionId
         }),
       });
 
@@ -130,6 +151,17 @@ export default function Home() {
     }
   };
 
+  if (isLoadingSession) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
+          <p className="mt-2 text-gray-600">Loading chat session...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
@@ -144,9 +176,15 @@ export default function Home() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <header className="bg-white border-b border-gray-200 py-4 px-6 flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-gray-800">Agentic RAG System</h1>
+          <div className="flex items-center">
+            <MobileMenu 
+              activeSessionId={sessionId} 
+              onNewChat={handleNewChat} 
+            />
+            <h1 className="text-xl font-semibold text-gray-800 ml-2">Agentic RAG System</h1>
+          </div>
           
-          <div className="md:hidden">
+          <div>
             <button 
               onClick={handleNewChat}
               className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-sm"

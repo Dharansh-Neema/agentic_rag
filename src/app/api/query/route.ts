@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryRagChain } from '@/lib/retrieval/retriever';
+import { connectToDatabase } from '@/lib/utils/mongodb';
+import { ChatSession } from '@/lib/models/chatSession';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
-    const { question } = await request.json();
+    const { question, sessionId } = await request.json();
     
     if (!question || typeof question !== 'string' || question.trim() === '') {
       return NextResponse.json({ 
@@ -14,12 +16,51 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
     
+    // Get answer from RAG system
     const answer = await queryRagChain(question);
+    
+    // If sessionId is provided, save the conversation to the chat session
+    if (sessionId) {
+      try {
+        await connectToDatabase();
+        
+        const session = await ChatSession.findById(sessionId);
+        
+        if (session) {
+          // Add user message
+          session.messages.push({
+            role: 'user',
+            content: question,
+            timestamp: new Date()
+          });
+          
+          // Add assistant message
+          session.messages.push({
+            role: 'assistant',
+            content: answer,
+            timestamp: new Date()
+          });
+          
+          // Update session title if it's the first message
+          if (session.messages.length === 2 && session.title === 'New Chat') {
+            // Use the first few words of the question as the title
+            const titlePreview = question.split(' ').slice(0, 5).join(' ');
+            session.title = titlePreview + (question.length > titlePreview.length ? '...' : '');
+          }
+          
+          await session.save();
+        }
+      } catch (dbError) {
+        console.error('Error saving conversation to session:', dbError);
+        // Continue even if saving to DB fails
+      }
+    }
     
     return NextResponse.json({ 
       success: true, 
       question,
-      answer
+      answer,
+      sessionId
     }, { status: 200 });
   } catch (error) {
     console.error('Error querying RAG system:', error);
