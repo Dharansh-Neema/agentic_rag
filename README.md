@@ -1,36 +1,149 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Agentic RAG System
 
-## Getting Started
+A Next.js application that combines Retrieval-Augmented Generation (RAG) with an intelligent agent system to provide context-aware responses to user queries. The system uses Pinecone for vector storage, Google Gemini for embeddings and LLM capabilities, and MongoDB for chat session management.
 
-First, run the development server:
+## Features
+
+- **Super Agent Query Routing**: Intelligently routes queries to specialized tools or RAG pipeline
+- **Document Ingestion**: Process and vectorize documents for knowledge retrieval
+- **Chat Interface**: Professional UI with conversation history and session management
+- **Specialized Tools**: Weather, math, and general knowledge tools
+- **Vector Search**: Semantic search using Pinecone and Google Gemini embeddings
+
+## Architecture
+
+```
+┌─────────────────┐     ┌───────────────────┐     ┌────────────────┐
+│                 │     │                   │     │                │
+│  Chat Interface │────▶│  Super Agent     │────▶│  Weather Tool  │
+│                 │     │  Query Router    │     │                │
+└─────────────────┘     │                   │     └────────────────┘
+                        │                   │     ┌────────────────┐
+                        │                   │────▶│  Math Tool     │
+                        │                   │     │                │
+                        │                   │     └────────────────┘
+                        │                   │     ┌────────────────┐
+                        │                   │────▶│  General Tool  │
+                        │                   │     │                │
+                        │                   │     └────────────────┘
+                        │                   │     ┌────────────────┐
+                        │                   │────▶│  RAG Pipeline  │
+                        │                   │     │  (Pinecone)    │
+                        └───────────────────┘     └────────────────┘
+```
+
+## Setup
+
+### Prerequisites
+
+- Node.js 18+ and npm/yarn
+- MongoDB instance (local or Atlas)
+- Pinecone account
+- Google Gemini API key
+- OpenWeatherMap API key
+
+### Installation
+
+1. Clone the repository
+
+```bash
+git clone https://github.com/yourusername/agentic_rag.git
+cd agentic_rag
+```
+
+2. Install dependencies
+
+```bash
+npm install
+# or
+yarn install
+```
+
+3. Create a `.env` file based on the provided `env.sample`
+
+```bash
+cp env.sample .env
+```
+
+4. Fill in your API keys and configuration in the `.env` file
+
+```
+# Gemini API key for embeddings and LLM
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# Pinecone API key and environment
+PINECONE_API_KEY=your_pinecone_api_key_here
+PINECONE_ENVIRONMENT=your_pinecone_environment_here
+
+# MongoDB connection URI (for chat sessions)
+MONGODB_URI=mongodb://localhost:27017/agentic_rag
+
+# OpenWeatherMap API key (for weather tool)
+OPENWEATHER_API_KEY=your_openweathermap_api_key_here
+```
+
+5. Start the development server
 
 ```bash
 npm run dev
 # or
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+6. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Usage
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Document Ingestion
 
-## Learn More
+1. Place your markdown documents in the `data` folder
+2. Click the "Ingest Documents" button in the UI
+3. Wait for the ingestion process to complete
 
-To learn more about Next.js, take a look at the following resources:
+### API Endpoints
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+#### Ingest Documents
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+curl -X POST http://localhost:3000/api/ingest
+```
 
-## Deploy on Vercel
+#### Query the System
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+curl -X POST http://localhost:3000/api/query \
+  -H "Content-Type: application/json" \
+  -d '{"query": "What is markdown?", "sessionId": "optional-session-id"}'
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+#### Create a Chat Session
+
+```bash
+curl -X POST http://localhost:3000/api/chat-sessions \
+  -H "Content-Type: application/json" \
+  -d '{"title": "New Chat"}'
+```
+
+#### Add Message to Chat Session
+
+```bash
+curl -X POST http://localhost:3000/api/chat-sessions/SESSION_ID/messages \
+  -H "Content-Type: application/json" \
+  -d '{"content": "Tell me about markdown", "role": "user"}'
+```
+
+## Agent Flow
+
+1. User submits a query through the chat interface
+2. The query is sent to the super agent query router
+3. The query classifier determines the appropriate tool:
+   - Weather-related queries → Weather tool (using OpenWeatherMap API)
+   - Math-related queries → Math tool
+   - General knowledge queries → General tool
+   - Document-specific queries → RAG pipeline with Pinecone
+4. The selected tool processes the query and returns a response
+5. The response is displayed in the chat interface and stored in the session history
+
+## License
+
+MIT
