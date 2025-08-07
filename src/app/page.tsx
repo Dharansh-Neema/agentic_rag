@@ -1,103 +1,182 @@
+'use client';
+
 import Image from "next/image";
+import { useState, FormEvent, useRef, useEffect } from 'react';
+
+type Message = {
+  role: 'user' | 'assistant';
+  content: string;
+};
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isIngesting, setIsIngesting] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+
+    const userMessage = input;
+    setInput('');
+    
+    // Add user message to chat
+    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: userMessage }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setMessages(prev => [...prev, { role: 'assistant', content: data.answer }]);
+      } else {
+        setMessages(prev => [...prev, { 
+          role: 'assistant', 
+          content: `Error: ${data.message || 'Something went wrong'}` 
+        }]);
+      }
+    } catch (error) {
+      console.error('Error querying the RAG system:', error);
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: 'Sorry, I encountered an error while processing your request.' 
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleIngestDocuments = async (forceReindex: boolean = false) => {
+    setIsIngesting(true);
+
+    try {
+      const response = await fetch('/api/ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ forceReindex }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setMessages(prev => [...prev, { 
+          role: 'assistant', 
+          content: `Documents ingested successfully! Processed ${data.data?.documentsCount || 0} documents into ${data.data?.chunksCount || 0} chunks.` 
+        }]);
+      } else {
+        setMessages(prev => [...prev, { 
+          role: 'assistant', 
+          content: `Error ingesting documents: ${data.message || 'Something went wrong'}` 
+        }]);
+      }
+    } catch (error) {
+      console.error('Error ingesting documents:', error);
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: 'Sorry, I encountered an error while ingesting documents.' 
+      }]);
+    } finally {
+      setIsIngesting(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <h1 className="text-3xl font-bold mb-4 text-center text-gray-800 dark:text-gray-200">
+          Agentic RAG System
+        </h1>
+        
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 mb-4">
+          <div className="flex space-x-2 mb-4">
+            <button
+              onClick={() => handleIngestDocuments(false)}
+              disabled={isIngesting}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md disabled:bg-blue-300"
+            >
+              {isIngesting ? 'Ingesting...' : 'Ingest Documents'}
+            </button>
+            
+            <button
+              onClick={() => handleIngestDocuments(true)}
+              disabled={isIngesting}
+              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md disabled:bg-red-300"
+            >
+              {isIngesting ? 'Ingesting...' : 'Force Reindex'}
+            </button>
+          </div>
+          
+          <div className="border rounded-lg p-4 h-[500px] overflow-y-auto mb-4 bg-gray-50 dark:bg-gray-900">
+            {messages.length === 0 ? (
+              <div className="text-center text-gray-500 dark:text-gray-400 mt-40">
+                <p>No messages yet. Start by ingesting documents and asking questions!</p>
+              </div>
+            ) : (
+              messages.map((message, index) => (
+                <div
+                  key={index}
+                  className={`mb-4 p-3 rounded-lg ${
+                    message.role === 'user'
+                      ? 'bg-blue-100 dark:bg-blue-900 ml-8'
+                      : 'bg-gray-100 dark:bg-gray-800 mr-8'
+                  }`}
+                >
+                  <div className="font-bold mb-1">
+                    {message.role === 'user' ? 'You' : 'Assistant'}
+                  </div>
+                  <div className="whitespace-pre-wrap">{message.content}</div>
+                </div>
+              ))
+            )}
+            {isLoading && (
+              <div className="text-center text-gray-500 dark:text-gray-400 my-2">
+                Thinking...
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+          
+          <form onSubmit={handleSubmit} className="flex space-x-2">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask a question..."
+              disabled={isLoading || isIngesting}
+              className="flex-grow border rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white dark:border-gray-600"
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            <button
+              type="submit"
+              disabled={isLoading || isIngesting || !input.trim()}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md disabled:bg-blue-300"
+            >
+              {isLoading ? 'Sending...' : 'Send'}
+            </button>
+          </form>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        <div className="text-center text-sm text-gray-500 dark:text-gray-400">
+          <p>
+            RAG System with ChromaDB, Langchain, and LangGraph
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
